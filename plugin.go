@@ -28,7 +28,7 @@ func (p *Plugin) PluginInfo() launchr.PluginInfo {
 }
 
 // OnAppInit implements launchr.Plugin interface.
-func (p *Plugin) OnAppInit(app launchr.App) error {
+func (p *Plugin) OnAppInit(_ launchr.App) error {
 	return nil
 }
 
@@ -47,6 +47,11 @@ func (p *Plugin) CobraAddCommands(rootCmd *cobra.Command) error {
 				return err
 			}
 
+			showTree, err := cmd.Flags().GetBool("tree")
+			if err != nil {
+				return err
+			}
+
 			depth, err := cmd.Flags().GetInt8("depth")
 			if err != nil {
 				return err
@@ -55,11 +60,12 @@ func (p *Plugin) CobraAddCommands(rootCmd *cobra.Command) error {
 				return fmt.Errorf("depth value should not be zero")
 			}
 
-			return dependencies(args[0], !showPaths, depth)
+			return dependencies(args[0], !showPaths, showTree, depth)
 		},
 	}
 
 	depCmd.Flags().Bool("mrn", false, "Show MRN instead of paths")
+	depCmd.Flags().Bool("tree", false, "Show dependencies in tree-like output")
 	depCmd.Flags().Int8("depth", 99, "Limit recursion lookup depth")
 	depCmd.SetArgs([]string{"target"})
 
@@ -87,7 +93,7 @@ func convertToPath(mrn string) string {
 	return fmt.Sprintf("%s/%s/roles/%s", parts[0], parts[1], parts[2])
 }
 
-func dependencies(target string, toPath bool, depth int8) error {
+func dependencies(target string, toPath, showTree bool, depth int8) error {
 	searchMrn := target
 	if !isMachineResourceName(searchMrn) {
 		converted, err := convertTarget(target)
@@ -98,30 +104,45 @@ func dependencies(target string, toPath bool, depth int8) error {
 		searchMrn = converted
 	}
 
+	var header string
+	if toPath {
+		header = convertToPath(searchMrn)
+	} else {
+		header = searchMrn
+	}
+
 	inv, err := plasmactlbump.NewInventory("empty", ".", "")
 	if err != nil {
 		return err
 	}
 	requiredMap := inv.GetRequiredMap()
 	parents := lookupDependencies(searchMrn, requiredMap, depth)
-
 	if len(parents) > 0 {
 		cli.Println("- Parent dependencies:")
-		printItems(parents, toPath)
+		if showTree {
+			var parentsTree forwardTree = requiredMap
+			parentsTree.print(header, "", 1, depth, searchMrn, toPath)
+		} else {
+			printList(parents, toPath)
+		}
 	}
 
 	dependenciesMap := inv.GetDependenciesMap()
 	children := lookupDependencies(searchMrn, dependenciesMap, depth)
-
 	if len(children) > 0 {
 		cli.Println("- Child dependencies:")
-		printItems(children, toPath)
+		if showTree {
+			var childrenTree forwardTree = dependenciesMap
+			childrenTree.print(header, "", 1, depth, searchMrn, toPath)
+		} else {
+			printList(children, toPath)
+		}
 	}
 
 	return nil
 }
 
-func printItems(items map[string]bool, toPath bool) {
+func printList(items map[string]bool, toPath bool) {
 	keys := make([]string, 0, len(items))
 	for k := range items {
 		keys = append(keys, k)
@@ -156,5 +177,49 @@ func lookupDependenciesRecursively(resourceName string, resourcesMap map[string]
 	for item := range resourcesMap[resourceName] {
 		result[item] = true
 		lookupDependenciesRecursively(item, resourcesMap, result, depth+1, limit)
+	}
+}
+
+type forwardTree map[string]map[string]bool
+
+func (t forwardTree) print(header, indent string, depth, limit int8, parent string, toPath bool) {
+	if indent == "" {
+		cli.Println(header)
+	}
+
+	if depth == limit {
+		return
+	}
+
+	children, ok := t[parent]
+	if !ok {
+		return
+	}
+
+	keys := make([]string, 0, len(children))
+	for k := range children {
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	for i, node := range keys {
+		isLast := i == len(keys)-1
+		var newIndent, edge string
+
+		if isLast {
+			newIndent = indent + "    "
+			edge = "└── "
+		} else {
+			newIndent = indent + "│   "
+			edge = "├── "
+		}
+		value := node
+		if toPath {
+			value = convertToPath(value)
+		}
+
+		cli.Println(indent + edge + value)
+		t.print("", newIndent, depth+1, limit, node, toPath)
 	}
 }
