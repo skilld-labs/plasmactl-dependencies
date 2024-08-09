@@ -35,9 +35,10 @@ func (p *Plugin) OnAppInit(_ launchr.App) error {
 // CobraAddCommands implements launchr.CobraPlugin interface to provide bump functionality.
 func (p *Plugin) CobraAddCommands(rootCmd *cobra.Command) error {
 	var depCmd = &cobra.Command{
-		Use:   "dependencies",
-		Short: "Shows parent and child resources of resource",
-		Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+		Use:     "dependencies",
+		Short:   "Shows parent and child resources of resource",
+		Aliases: []string{"deps"},
+		Args:    cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Don't show usage help on a runtime error.
 			cmd.SilenceUsage = true
