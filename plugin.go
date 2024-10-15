@@ -36,7 +36,7 @@ func (p *Plugin) OnAppInit(_ launchr.App) error {
 func (p *Plugin) CobraAddCommands(rootCmd *cobra.Command) error {
 	var depCmd = &cobra.Command{
 		Use:     "dependencies",
-		Short:   "Shows parent and child resources of resource",
+		Short:   "Shows dependencies and dependent resources of selected resource",
 		Aliases: []string{"deps"},
 		Args:    cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -119,7 +119,7 @@ func dependencies(target string, toPath, showTree bool, depth int8) error {
 	requiredMap := inv.GetRequiredMap()
 	parents := lookupDependencies(searchMrn, requiredMap, depth)
 	if len(parents) > 0 {
-		cli.Println("- Parent dependencies:")
+		cli.Println("- Dependent resources:")
 		if showTree {
 			var parentsTree forwardTree = requiredMap
 			parentsTree.print(header, "", 1, depth, searchMrn, toPath)
@@ -131,7 +131,7 @@ func dependencies(target string, toPath, showTree bool, depth int8) error {
 	dependenciesMap := inv.GetDependenciesMap()
 	children := lookupDependencies(searchMrn, dependenciesMap, depth)
 	if len(children) > 0 {
-		cli.Println("- Child dependencies:")
+		cli.Println("- Dependencies:")
 		if showTree {
 			var childrenTree forwardTree = dependenciesMap
 			childrenTree.print(header, "", 1, depth, searchMrn, toPath)
