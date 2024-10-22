@@ -3,13 +3,14 @@ package plasmactldependencies
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
 	"github.com/launchrctl/launchr"
-	"github.com/launchrctl/launchr/pkg/cli"
-	plasmactlbump "github.com/skilld-labs/plasmactl-bump"
 	"github.com/spf13/cobra"
+
+	"github.com/skilld-labs/plasmactl-bump/v2/pkg/sync"
 )
 
 func init() {
@@ -34,6 +35,8 @@ func (p *Plugin) OnAppInit(_ launchr.App) error {
 
 // CobraAddCommands implements launchr.CobraPlugin interface to provide bump functionality.
 func (p *Plugin) CobraAddCommands(rootCmd *cobra.Command) error {
+	var source string
+
 	var depCmd = &cobra.Command{
 		Use:     "dependencies",
 		Short:   "Shows dependencies and dependent resources of selected resource",
@@ -42,6 +45,13 @@ func (p *Plugin) CobraAddCommands(rootCmd *cobra.Command) error {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Don't show usage help on a runtime error.
 			cmd.SilenceUsage = true
+
+			if _, err := os.Stat(source); os.IsNotExist(err) {
+				launchr.Term().Warning().Printfln("%s doesn't exist, fallback to current dir", source)
+				source = "."
+			} else {
+				launchr.Term().Info().Printfln("Selected source is %s", source)
+			}
 
 			showPaths, err := cmd.Flags().GetBool("mrn")
 			if err != nil {
@@ -61,10 +71,11 @@ func (p *Plugin) CobraAddCommands(rootCmd *cobra.Command) error {
 				return fmt.Errorf("depth value should not be zero")
 			}
 
-			return dependencies(args[0], !showPaths, showTree, depth)
+			return dependencies(args[0], source, !showPaths, showTree, depth)
 		},
 	}
 
+	depCmd.Flags().StringVar(&source, "source", ".compose/build", "Resources source dir")
 	depCmd.Flags().Bool("mrn", false, "Show MRN instead of paths")
 	depCmd.Flags().Bool("tree", false, "Show dependencies in tree-like output")
 	depCmd.Flags().Int8("depth", 99, "Limit recursion lookup depth")
@@ -79,9 +90,8 @@ func isMachineResourceName(target string) bool {
 	return len(list) == 3
 }
 
-func convertTarget(target string) (string, error) {
-	// @todo take current path as prefix
-	r := plasmactlbump.BuildResourceFromPath(target, "")
+func convertTarget(source, target string) (string, error) {
+	r := sync.BuildResourceFromPath(target, source)
 	if r == nil {
 		return "", fmt.Errorf("not valid resource %q", target)
 	}
@@ -94,10 +104,10 @@ func convertToPath(mrn string) string {
 	return fmt.Sprintf("%s/%s/roles/%s", parts[0], parts[1], parts[2])
 }
 
-func dependencies(target string, toPath, showTree bool, depth int8) error {
+func dependencies(target, source string, toPath, showTree bool, depth int8) error {
 	searchMrn := target
 	if !isMachineResourceName(searchMrn) {
-		converted, err := convertTarget(target)
+		converted, err := convertTarget(source, target)
 		if err != nil {
 			return err
 		}
@@ -112,14 +122,15 @@ func dependencies(target string, toPath, showTree bool, depth int8) error {
 		header = searchMrn
 	}
 
-	inv, err := plasmactlbump.NewInventory("empty", ".", "")
+	// @TODO move inventory into dependencies?
+	inv, err := sync.NewInventory(source)
 	if err != nil {
 		return err
 	}
 	requiredMap := inv.GetRequiredMap()
 	parents := lookupDependencies(searchMrn, requiredMap, depth)
 	if len(parents) > 0 {
-		cli.Println("- Dependent resources:")
+		launchr.Term().Info().Println("Dependent resources:")
 		if showTree {
 			var parentsTree forwardTree = requiredMap
 			parentsTree.print(header, "", 1, depth, searchMrn, toPath)
@@ -131,7 +142,7 @@ func dependencies(target string, toPath, showTree bool, depth int8) error {
 	dependenciesMap := inv.GetDependenciesMap()
 	children := lookupDependencies(searchMrn, dependenciesMap, depth)
 	if len(children) > 0 {
-		cli.Println("- Dependencies:")
+		launchr.Term().Info().Println("Dependencies:")
 		if showTree {
 			var childrenTree forwardTree = dependenciesMap
 			childrenTree.print(header, "", 1, depth, searchMrn, toPath)
@@ -156,7 +167,7 @@ func printList(items map[string]bool, toPath bool) {
 			res = convertToPath(res)
 		}
 
-		cli.Println("%s", res)
+		launchr.Term().Printfln("%s", res)
 	}
 }
 
@@ -185,7 +196,7 @@ type forwardTree map[string]map[string]bool
 
 func (t forwardTree) print(header, indent string, depth, limit int8, parent string, toPath bool) {
 	if indent == "" {
-		cli.Println(header)
+		launchr.Term().Printfln(header)
 	}
 
 	if depth == limit {
@@ -220,7 +231,7 @@ func (t forwardTree) print(header, indent string, depth, limit int8, parent stri
 			value = convertToPath(value)
 		}
 
-		cli.Println(indent + edge + value)
+		launchr.Term().Printfln(indent + edge + value)
 		t.print("", newIndent, depth+1, limit, node, toPath)
 	}
 }
