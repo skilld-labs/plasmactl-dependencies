@@ -4,6 +4,7 @@ package plasmactldependencies
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -17,24 +18,19 @@ func init() {
 	launchr.RegisterPlugin(&Plugin{})
 }
 
-// Plugin is launchr plugin providing dependencies search action.
+// Plugin is [launchr.Plugin] providing dependencies search action.
 type Plugin struct {
 }
 
-// PluginInfo implements launchr.Plugin interface.
+// PluginInfo implements [launchr.Plugin] interface.
 func (p *Plugin) PluginInfo() launchr.PluginInfo {
 	return launchr.PluginInfo{
 		Weight: 20,
 	}
 }
 
-// OnAppInit implements launchr.Plugin interface.
-func (p *Plugin) OnAppInit(_ launchr.App) error {
-	return nil
-}
-
-// CobraAddCommands implements launchr.CobraPlugin interface to provide bump functionality.
-func (p *Plugin) CobraAddCommands(rootCmd *cobra.Command) error {
+// CobraAddCommands implements [launchr.CobraPlugin] interface to provide bump functionality.
+func (p *Plugin) CobraAddCommands(rootCmd *launchr.Command) error {
 	var source string
 
 	var depCmd = &cobra.Command{
@@ -42,7 +38,7 @@ func (p *Plugin) CobraAddCommands(rootCmd *cobra.Command) error {
 		Short:   "Shows dependencies and dependent resources of selected resource",
 		Aliases: []string{"deps"},
 		Args:    cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *launchr.Command, args []string) error {
 			// Don't show usage help on a runtime error.
 			cmd.SilenceUsage = true
 
@@ -101,7 +97,7 @@ func convertTarget(source, target string) (string, error) {
 
 func convertToPath(mrn string) string {
 	parts := strings.Split(mrn, "__")
-	return fmt.Sprintf("%s/%s/roles/%s", parts[0], parts[1], parts[2])
+	return filepath.Join(parts[0], parts[1], "roles", parts[2])
 }
 
 func dependencies(target, source string, toPath, showTree bool, depth int8) error {
@@ -167,7 +163,7 @@ func printList(items map[string]bool, toPath bool) {
 			res = convertToPath(res)
 		}
 
-		launchr.Term().Printfln("%s", res)
+		launchr.Term().Println(res)
 	}
 }
 
