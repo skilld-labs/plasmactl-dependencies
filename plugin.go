@@ -167,28 +167,32 @@ func printList(items map[string]bool, toPath bool) {
 	}
 }
 
-func lookupDependencies(resourceName string, resourcesMap map[string]map[string]bool, depth int8) map[string]bool {
+func lookupDependencies(resourceName string, resourcesMap map[string]*sync.OrderedMap[bool], depth int8) map[string]bool {
 	result := make(map[string]bool)
-	for item := range resourcesMap[resourceName] {
-		result[item] = true
-		lookupDependenciesRecursively(item, resourcesMap, result, 1, depth)
+	if m, ok := resourcesMap[resourceName]; ok {
+		for _, item := range m.Keys() {
+			result[item] = true
+			lookupDependenciesRecursively(item, resourcesMap, result, 1, depth)
+		}
 	}
 
 	return result
 }
 
-func lookupDependenciesRecursively(resourceName string, resourcesMap map[string]map[string]bool, result map[string]bool, depth, limit int8) {
+func lookupDependenciesRecursively(resourceName string, resourcesMap map[string]*sync.OrderedMap[bool], result map[string]bool, depth, limit int8) {
 	if depth == limit {
 		return
 	}
 
-	for item := range resourcesMap[resourceName] {
-		result[item] = true
-		lookupDependenciesRecursively(item, resourcesMap, result, depth+1, limit)
+	if m, ok := resourcesMap[resourceName]; ok {
+		for _, item := range m.Keys() {
+			result[item] = true
+			lookupDependenciesRecursively(item, resourcesMap, result, depth+1, limit)
+		}
 	}
 }
 
-type forwardTree map[string]map[string]bool
+type forwardTree map[string]*sync.OrderedMap[bool]
 
 func (t forwardTree) print(header, indent string, depth, limit int8, parent string, toPath bool) {
 	if indent == "" {
@@ -204,11 +208,7 @@ func (t forwardTree) print(header, indent string, depth, limit int8, parent stri
 		return
 	}
 
-	keys := make([]string, 0, len(children))
-	for k := range children {
-		keys = append(keys, k)
-	}
-
+	keys := children.Keys()
 	sort.Strings(keys)
 
 	for i, node := range keys {
