@@ -163,7 +163,7 @@ func printList(items map[string]bool, toPath bool) {
 			res = convertToPath(res)
 		}
 
-		launchr.Term().Println(res)
+		launchr.Term().Print(res + "\n")
 	}
 }
 
