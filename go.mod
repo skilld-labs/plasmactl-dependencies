@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/launchrctl/launchr v0.16.4
-	github.com/skilld-labs/plasmactl-bump/v2 v2.0.4
+	github.com/skilld-labs/plasmactl-bump/v2 v2.0.7-0.20241101125551-8e6c6264dbc2
 	github.com/spf13/cobra v1.8.1
 )
 

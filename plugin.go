@@ -123,24 +123,22 @@ func dependencies(target, source string, toPath, showTree bool, depth int8) erro
 	if err != nil {
 		return err
 	}
-	requiredMap := inv.GetRequiredMap()
-	parents := lookupDependencies(searchMrn, requiredMap, depth)
+	parents := inv.GetRequiredByResources(searchMrn, depth)
 	if len(parents) > 0 {
 		launchr.Term().Info().Println("Dependent resources:")
 		if showTree {
-			var parentsTree forwardTree = requiredMap
+			var parentsTree forwardTree = inv.GetRequiredByMap()
 			parentsTree.print(header, "", 1, depth, searchMrn, toPath)
 		} else {
 			printList(parents, toPath)
 		}
 	}
 
-	dependenciesMap := inv.GetDependenciesMap()
-	children := lookupDependencies(searchMrn, dependenciesMap, depth)
+	children := inv.GetDependsOnResources(searchMrn, depth)
 	if len(children) > 0 {
 		launchr.Term().Info().Println("Dependencies:")
 		if showTree {
-			var childrenTree forwardTree = dependenciesMap
+			var childrenTree forwardTree = inv.GetDependsOnMap()
 			childrenTree.print(header, "", 1, depth, searchMrn, toPath)
 		} else {
 			printList(children, toPath)
@@ -164,31 +162,6 @@ func printList(items map[string]bool, toPath bool) {
 		}
 
 		launchr.Term().Print(res + "\n")
-	}
-}
-
-func lookupDependencies(resourceName string, resourcesMap map[string]*sync.OrderedMap[bool], depth int8) map[string]bool {
-	result := make(map[string]bool)
-	if m, ok := resourcesMap[resourceName]; ok {
-		for _, item := range m.Keys() {
-			result[item] = true
-			lookupDependenciesRecursively(item, resourcesMap, result, 1, depth)
-		}
-	}
-
-	return result
-}
-
-func lookupDependenciesRecursively(resourceName string, resourcesMap map[string]*sync.OrderedMap[bool], result map[string]bool, depth, limit int8) {
-	if depth == limit {
-		return
-	}
-
-	if m, ok := resourcesMap[resourceName]; ok {
-		for _, item := range m.Keys() {
-			result[item] = true
-			lookupDependenciesRecursively(item, resourcesMap, result, depth+1, limit)
-		}
 	}
 }
 
