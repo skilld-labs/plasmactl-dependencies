@@ -388,8 +388,8 @@ github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/skeema/knownhosts v1.3.0 h1:AM+y0rI04VksttfwjkSTNQorvGqmwATnvnAHpSgc0LY=
 github.com/skeema/knownhosts v1.3.0/go.mod h1:sPINvnADmT/qYH1kfv+ePMmOBTH6Tbl7b5LvTDjFK7M=
-github.com/skilld-labs/plasmactl-bump/v2 v2.0.7-0.20241101125551-8e6c6264dbc2 h1:iZFtCP4lwwKFc3bOBCcQVGVpT20xYB8Z/IPhm5zF+ts=
-github.com/skilld-labs/plasmactl-bump/v2 v2.0.7-0.20241101125551-8e6c6264dbc2/go.mod h1:HgdOmf7bgc3Q38b05RezpADcLGsBvso396tGmQnc4CM=
+github.com/skilld-labs/plasmactl-bump/v2 v2.0.10 h1:Cx+TjYtNcbXSbRzW3AJKe8nYIM3IbQy/ronqzlpt8cE=
+github.com/skilld-labs/plasmactl-bump/v2 v2.0.10/go.mod h1:HgdOmf7bgc3Q38b05RezpADcLGsBvso396tGmQnc4CM=
 github.com/sosedoff/ansible-vault-go v0.2.0 h1:XqkBdqbXgTuFQ++NdrZvSdUTNozeb6S3V5x7FVs17vg=
 github.com/sosedoff/ansible-vault-go v0.2.0/go.mod h1:wMU54HNJfY0n0KIgbpA9m15NBfaUDlJrAsaZp0FwzkI=
 github.com/spf13/cobra v1.8.1 h1:e5/vxKd/rZsfSJMUX1agtjeTDf+qv1/JdBF8gg5k9ZM=
