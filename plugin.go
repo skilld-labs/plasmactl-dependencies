@@ -2,6 +2,8 @@
 package plasmactldependencies
 
 import (
+	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,10 +11,13 @@ import (
 	"strings"
 
 	"github.com/launchrctl/launchr"
-	"github.com/spf13/cobra"
+	"github.com/launchrctl/launchr/pkg/action"
 
 	"github.com/skilld-labs/plasmactl-bump/v2/pkg/sync"
 )
+
+//go:embed action.yaml
+var actionYaml []byte
 
 func init() {
 	launchr.RegisterPlugin(&Plugin{})
@@ -29,56 +34,30 @@ func (p *Plugin) PluginInfo() launchr.PluginInfo {
 	}
 }
 
-// CobraAddCommands implements [launchr.CobraPlugin] interface to provide bump functionality.
-func (p *Plugin) CobraAddCommands(rootCmd *launchr.Command) error {
-	var source string
+// DiscoverActions implements [launchr.ActionDiscoveryPlugin] interface.
+func (p *Plugin) DiscoverActions(_ context.Context) ([]*action.Action, error) {
+	a := action.NewFromYAML("dependencies", actionYaml)
+	a.SetRuntime(action.NewFnRuntime(func(_ context.Context, a *action.Action) error {
+		input := a.Input()
+		source := input.Opt("source").(string)
+		if _, err := os.Stat(source); os.IsNotExist(err) {
+			launchr.Term().Warning().Printfln("%s doesn't exist, fallback to current dir", source)
+			source = "."
+		} else {
+			launchr.Term().Info().Printfln("Selected source is %s", source)
+		}
 
-	var depCmd = &cobra.Command{
-		Use:     "dependencies",
-		Short:   "Shows dependencies and dependent resources of selected resource",
-		Aliases: []string{"deps"},
-		Args:    cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
-		RunE: func(cmd *launchr.Command, args []string) error {
-			// Don't show usage help on a runtime error.
-			cmd.SilenceUsage = true
+		showPaths := input.Opt("mrn").(bool)
+		showTree := input.Opt("tree").(bool)
+		depth := int8(input.Opt("depth").(int)) //nolint:gosec
+		if depth == 0 {
+			return fmt.Errorf("depth value should not be zero")
+		}
 
-			if _, err := os.Stat(source); os.IsNotExist(err) {
-				launchr.Term().Warning().Printfln("%s doesn't exist, fallback to current dir", source)
-				source = "."
-			} else {
-				launchr.Term().Info().Printfln("Selected source is %s", source)
-			}
-
-			showPaths, err := cmd.Flags().GetBool("mrn")
-			if err != nil {
-				return err
-			}
-
-			showTree, err := cmd.Flags().GetBool("tree")
-			if err != nil {
-				return err
-			}
-
-			depth, err := cmd.Flags().GetInt8("depth")
-			if err != nil {
-				return err
-			}
-			if depth == 0 {
-				return fmt.Errorf("depth value should not be zero")
-			}
-
-			return dependencies(args[0], source, !showPaths, showTree, depth)
-		},
-	}
-
-	depCmd.Flags().StringVar(&source, "source", ".compose/build", "Resources source dir")
-	depCmd.Flags().Bool("mrn", false, "Show MRN instead of paths")
-	depCmd.Flags().Bool("tree", false, "Show dependencies in tree-like output")
-	depCmd.Flags().Int8("depth", 99, "Limit recursion lookup depth")
-	depCmd.SetArgs([]string{"target"})
-
-	rootCmd.AddCommand(depCmd)
-	return nil
+		target := input.Arg("target").(string)
+		return dependencies(target, source, !showPaths, showTree, depth)
+	}))
+	return []*action.Action{a}, nil
 }
 
 func isMachineResourceName(target string) bool {
