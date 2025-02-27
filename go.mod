@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/launchrctl/launchr v0.17.1
-	github.com/skilld-labs/plasmactl-bump/v2 v2.3.0
+	github.com/skilld-labs/plasmactl-bump/v2 v2.5.0
 )
 
 require (
@@ -64,7 +64,6 @@ require (
 	go.uber.org/mock v0.5.0 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/term v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
