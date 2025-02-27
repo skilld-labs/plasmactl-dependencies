@@ -346,8 +346,8 @@ github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6Mwd
 github.com/sirupsen/logrus v1.6.0/go.mod h1:7uNnSEd1DgxDLC74fIahvMZmmYsHGZGEOFrfsX/uA88=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
-github.com/skilld-labs/plasmactl-bump/v2 v2.3.0 h1:lC4gK4IKMyV1P8tolIPE6GbYuzNzSfMqhKs5EGC0zJw=
-github.com/skilld-labs/plasmactl-bump/v2 v2.3.0/go.mod h1:Ruh1LJd/hxS5WNQxztv1EXNnE+eAeeWws1Hwc6FNghk=
+github.com/skilld-labs/plasmactl-bump/v2 v2.5.0 h1:23wAH/DCqAYNIu/ZFGq13OsdfYLuyk72Sxqztd3H6RE=
+github.com/skilld-labs/plasmactl-bump/v2 v2.5.0/go.mod h1:0QNY3526GVITcaRMvn1Y+IOKqoMQ1bnaf4RqM44A1Ac=
 github.com/sosedoff/ansible-vault-go v0.2.0 h1:XqkBdqbXgTuFQ++NdrZvSdUTNozeb6S3V5x7FVs17vg=
 github.com/sosedoff/ansible-vault-go v0.2.0/go.mod h1:wMU54HNJfY0n0KIgbpA9m15NBfaUDlJrAsaZp0FwzkI=
 github.com/spf13/cobra v1.8.1 h1:e5/vxKd/rZsfSJMUX1agtjeTDf+qv1/JdBF8gg5k9ZM=
