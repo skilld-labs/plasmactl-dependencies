@@ -12,7 +12,6 @@ import (
 
 	"github.com/launchrctl/launchr"
 	"github.com/launchrctl/launchr/pkg/action"
-
 	"github.com/skilld-labs/plasmactl-bump/v2/pkg/sync"
 )
 
@@ -38,13 +37,23 @@ func (p *Plugin) PluginInfo() launchr.PluginInfo {
 func (p *Plugin) DiscoverActions(_ context.Context) ([]*action.Action, error) {
 	a := action.NewFromYAML("dependencies", actionYaml)
 	a.SetRuntime(action.NewFnRuntime(func(_ context.Context, a *action.Action) error {
+		log := launchr.Log()
+		if rt, ok := a.Runtime().(action.RuntimeLoggerAware); ok {
+			log = rt.LogWith()
+		}
+
+		term := launchr.Term()
+		if rt, ok := a.Runtime().(action.RuntimeTermAware); ok {
+			term = rt.Term()
+		}
+
 		input := a.Input()
 		source := input.Opt("source").(string)
 		if _, err := os.Stat(source); os.IsNotExist(err) {
-			launchr.Term().Warning().Printfln("%s doesn't exist, fallback to current dir", source)
+			term.Warning().Printfln("%s doesn't exist, fallback to current dir", source)
 			source = "."
 		} else {
-			launchr.Term().Info().Printfln("Selected source is %s", source)
+			term.Info().Printfln("Selected source is %s", source)
 		}
 
 		showPaths := input.Opt("mrn").(bool)
@@ -55,9 +64,17 @@ func (p *Plugin) DiscoverActions(_ context.Context) ([]*action.Action, error) {
 		}
 
 		target := input.Arg("target").(string)
-		return dependencies(target, source, !showPaths, showTree, depth)
+		dependencies := &dependenciesAction{}
+		dependencies.SetLogger(log)
+		dependencies.SetTerm(term)
+		return dependencies.run(target, source, !showPaths, showTree, depth)
 	}))
 	return []*action.Action{a}, nil
+}
+
+type dependenciesAction struct {
+	action.WithLogger
+	action.WithTerm
 }
 
 func isMachineResourceName(target string) bool {
@@ -79,7 +96,7 @@ func convertToPath(mrn string) string {
 	return filepath.Join(parts[0], parts[1], "roles", parts[2])
 }
 
-func dependencies(target, source string, toPath, showTree bool, depth int8) error {
+func (a *dependenciesAction) run(target, source string, toPath, showTree bool, depth int8) error {
 	searchMrn := target
 	if !isMachineResourceName(searchMrn) {
 		converted, err := convertTarget(source, target)
@@ -98,36 +115,36 @@ func dependencies(target, source string, toPath, showTree bool, depth int8) erro
 	}
 
 	// @TODO move inventory into dependencies?
-	inv, err := sync.NewInventory(source)
+	inv, err := sync.NewInventory(source, a.Log())
 	if err != nil {
 		return err
 	}
 	parents := inv.GetRequiredByResources(searchMrn, depth)
 	if len(parents) > 0 {
-		launchr.Term().Info().Println("Dependent resources:")
+		a.Term().Info().Println("Dependent resources:")
 		if showTree {
 			var parentsTree forwardTree = inv.GetRequiredByMap()
-			parentsTree.print(header, "", 1, depth, searchMrn, toPath)
+			parentsTree.print(a.Term(), header, "", 1, depth, searchMrn, toPath)
 		} else {
-			printList(parents, toPath)
+			a.printList(parents, toPath)
 		}
 	}
 
 	children := inv.GetDependsOnResources(searchMrn, depth)
 	if len(children) > 0 {
-		launchr.Term().Info().Println("Dependencies:")
+		a.Term().Info().Println("Dependencies:")
 		if showTree {
 			var childrenTree forwardTree = inv.GetDependsOnMap()
-			childrenTree.print(header, "", 1, depth, searchMrn, toPath)
+			childrenTree.print(a.Term(), header, "", 1, depth, searchMrn, toPath)
 		} else {
-			printList(children, toPath)
+			a.printList(children, toPath)
 		}
 	}
 
 	return nil
 }
 
-func printList(items map[string]bool, toPath bool) {
+func (a *dependenciesAction) printList(items map[string]bool, toPath bool) {
 	keys := make([]string, 0, len(items))
 	for k := range items {
 		keys = append(keys, k)
@@ -140,15 +157,15 @@ func printList(items map[string]bool, toPath bool) {
 			res = convertToPath(res)
 		}
 
-		launchr.Term().Print(res + "\n")
+		a.Term().Print(res + "\n")
 	}
 }
 
 type forwardTree map[string]*sync.OrderedMap[bool]
 
-func (t forwardTree) print(header, indent string, depth, limit int8, parent string, toPath bool) {
+func (t forwardTree) print(printer *launchr.Terminal, header, indent string, depth, limit int8, parent string, toPath bool) {
 	if indent == "" {
-		launchr.Term().Printfln(header)
+		printer.Printfln(header)
 	}
 
 	if depth == limit {
@@ -179,7 +196,7 @@ func (t forwardTree) print(header, indent string, depth, limit int8, parent stri
 			value = convertToPath(value)
 		}
 
-		launchr.Term().Printfln(indent + edge + value)
-		t.print("", newIndent, depth+1, limit, node, toPath)
+		printer.Printfln(indent + edge + value)
+		t.print(printer, "", newIndent, depth+1, limit, node, toPath)
 	}
 }
